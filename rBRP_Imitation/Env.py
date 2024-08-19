@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 """
     https://github.com/binarycopycode/CRP_DAM
-    Modified for uBRP 
+    Modified for rBRP 
 """
 class Env():
     def __init__(self, device, x, embed_dim=128):
