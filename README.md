@@ -62,3 +62,7 @@ python uBRP_Imitation/test.py --model_path "uBRP_IL_SSIL.pt" --decode_type ESS -
 ```bash
 python uBRP_Imitation/test.py --test_all --model_path "uBRP_IL_SSIL.pt" --decode_type ESS --batch 2560 --sampling_num 2560
 ```
+
+## References
+* https://github.com/wouterkool/attention-learn-to-route
+* https://github.com/binarycopycode/CRP_DAM
