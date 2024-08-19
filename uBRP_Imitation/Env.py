@@ -69,37 +69,6 @@ class Env():
         self.x = torch.mul(self.x.view(self.batch, self.max_stacks*self.max_tiers), new_ratio.unsqueeze(1)).view(self.batch, self.max_stacks, self.max_tiers).to(self.device)
         
         self._update_empty()
-    def _get_step(self, next_node):
-        
-        """ next_node : (batch, 1) int, range[0, max_stacks)
-
-            mask(batch,max_stacks,1) 1表示那一列不可选，0表示可选
-            context: (batch, 1, embed_dim)
-            Copied from https://github.com/binarycopycode/CRP_DAM
-        """
-
-        len_mask = torch.where(self.x > 0., 1, 0).to(self.device)
-        stack_len = torch.sum(len_mask, dim=2)
-
-        target_stack_len = torch.gather(stack_len, dim=1, index=self.target_stack[:, None]).to(self.device)
-
-        next_stack_len=torch.gather(stack_len,dim=1,index=next_node).to(self.device)
-
-        top_ind=stack_len-1
-        top_ind=torch.where(top_ind>=0,top_ind,0).to(self.device)
-        top_val=torch.gather(self.x,dim=2,index=top_ind[:,:,None]).to(self.device)
-        top_val=top_val.squeeze(-1)
-        target_top_val=torch.gather(top_val,dim=1,index=self.target_stack[:,None]).to(self.device)
-
-        target_ind=target_stack_len-1
-        target_ind=torch.where(target_ind>=0,target_ind,0).to(self.device)
-        input_index=(torch.arange(self.batch).to(self.device),self.target_stack.to(self.device),target_ind.squeeze(-1).to(self.device))
-        self.x=self.x.index_put_(input_index,torch.Tensor([0.]).to(self.device))
-
-
-        input_index=(torch.arange(self.batch).to(self.device),next_node.squeeze(-1).to(self.device),next_stack_len.squeeze(-1).to(self.device))
-        self.x=self.x.index_put_(input_index,target_top_val.squeeze(-1)).to(self.device)
-        self.clear()
     def step(self, actions):
         """ action: (batch, 2) int, range[0,max_stacks)
             It is constructed with (Source, Destination)
@@ -150,26 +119,6 @@ class Env():
         #Combine Masks
         mask = torch.logical_or(mask_top, mask_bottom).to(self.device)
         mask.scatter_(2, mask_diagonal, 1)
-        return mask.view(self.batch, self.max_stacks*self.max_stacks)[:,:,None].to(self.device)
-    def create_mask_rBRP(self):
-        top_val=self.x[:,:,-1].to(self.device)
-        bottom_val = self.x[:,:,0].to(self.device)
-        mask_top=torch.where(top_val>0,True,False).to(self.device).bool()
-        mask_top = mask_top.repeat(1, self.max_stacks).view(self.batch, self.max_stacks, self.max_stacks).to(self.device)
-        mask_bottom=torch.where(bottom_val==0.,True,False).to(self.device).bool()
-        mask_bottom = mask_bottom.view(self.batch, self.max_stacks, 1).repeat(1, 1, self.max_stacks).to(self.device)
-        
-        mask = torch.logical_or(mask_top, mask_bottom).to(self.device)
-        diagonal_size = self.max_stacks
-        d_tensor = torch.zeros((self.batch, diagonal_size, 2), dtype=torch.long).to(self.device)
-        d_tensor[:,:,0] = torch.arange(diagonal_size).to(self.device)
-        d_tensor[:,:,1] = torch.arange(diagonal_size).to(self.device)
-        mask.scatter_(2, d_tensor, 1)
-        self.find_target_stack()
-        target_mask = torch.ones([self.batch, self.max_stacks, self.max_stacks]).bool().to(self.device)
-        target_mask[torch.arange(0, self.batch, 1).to(self.device), self.target_stack, :] = False
-
-        mask = torch.logical_or(mask, target_mask).to(self.device)
         return mask.view(self.batch, self.max_stacks*self.max_stacks)[:,:,None].to(self.device)
     
 
